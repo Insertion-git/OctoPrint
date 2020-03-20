@@ -180,9 +180,11 @@ def serialList():
 			   + glob.glob("/dev/rfcomm*")
 
 	additionalPorts = settings().get(["serial", "additionalPorts"])
-	if additionalPorts:
-		for additional in additionalPorts:
-			baselist += glob.glob(additional)
+	for additional in additionalPorts:
+		if '://' in additional:                              # Begin -----
+			baselist.append(additional)                      # -----------
+		else:                                                # End -------
+			baselist += glob.glob(additional)                # Indent this
 
 	prev = settings().get(["serial", "port"])
 	if prev in baselist:
@@ -2651,26 +2653,29 @@ class MachineCom(object):
 			# connect to regular serial port
 			self._log("Connecting to: %s" % port)
 
-			serial_port_args = {
-				"baudrate": baudrateList()[0] if baudrate == 0 else baudrate,
-				"timeout": read_timeout,
-				"write_timeout": 0,
-			}
+			if '://' in str(port):                            # Begin -----
+				serial_obj = serial.serial_for_url(str(port)) # -----------
+			else:                                             # End -------
+				serial_port_args = {
+					"baudrate": baudrateList()[0] if baudrate == 0 else baudrate,
+					"timeout": read_timeout,
+					"write_timeout": 0,
+				}
 
-			if settings().getBoolean(["serial", "exclusive"]):
-				serial_port_args["exclusive"] = True
+				if settings().getBoolean(["serial", "exclusive"]):
+					serial_port_args["exclusive"] = True
 
-			serial_obj = serial.Serial(**serial_port_args)
-			serial_obj.port = str(port)
+				serial_obj = serial.Serial(**serial_port_args)
+				serial_obj.port = str(port)
 
-			use_parity_workaround = settings().get(["serial", "useParityWorkaround"])
-			needs_parity_workaround = get_os() == "linux" and os.path.exists("/etc/debian_version") # See #673
+				use_parity_workaround = settings().get(["serial", "useParityWorkaround"])
+				needs_parity_workaround = get_os() == "linux" and os.path.exists("/etc/debian_version") # See #673
 
-			if use_parity_workaround == "always" or (needs_parity_workaround and use_parity_workaround == "detect"):
-				serial_obj.parity = serial.PARITY_ODD
-				serial_obj.open()
-				serial_obj.close()
-				serial_obj.parity = serial.PARITY_NONE
+				if use_parity_workaround == "always" or (needs_parity_workaround and use_parity_workaround == "detect"):
+					serial_obj.parity = serial.PARITY_ODD
+					serial_obj.open()
+					serial_obj.close()
+					serial_obj.parity = serial.PARITY_NONE
 
 			serial_obj.open()
 
