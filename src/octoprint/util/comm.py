@@ -2652,20 +2652,22 @@ class MachineCom(object):
 
 			# connect to regular serial port
 			self._log("Connecting to: %s" % port)
-
-			serial_port_args = {
-				"port": str(port),
-				"baudrate": baudrateList()[0] if baudrate == 0 else baudrate,
-				"timeout": read_timeout,
-				"write_timeout": 0,
-				"parity": serial.PARITY_ODD
-			}
-
-			if settings().getBoolean(["serial", "exclusive"]):
-				serial_port_args["exclusive"] = True
-
-			serial_obj = serial.Serial(**serial_port_args)
-
+			if '://' in str(port):                            # Begin -----
+				serial_obj = serial.serial_for_url(str(port)) # -----------
+			else:                                             # End -------
+				if baudrate == 0:                             # Indent this
+					baudrates = baudrateList()
+					serial_obj = serial.Serial(str(port),
+					                           baudrates[0],
+					                           timeout=read_timeout,
+					                           write_timeout=10000,
+					                           parity=serial.PARITY_ODD)
+				else:
+					serial_obj = serial.Serial(str(port),
+					                           baudrate,
+					                           timeout=read_timeout,
+					                           write_timeout=10000,
+					                           parity=serial.PARITY_ODD)	
 			serial_obj.close()
 			serial_obj.parity = serial.PARITY_NONE
 			serial_obj.open()
@@ -2697,13 +2699,14 @@ class MachineCom(object):
 				return True
 
 		return False
+
 	_recoverable_communication_errors    = ("no line number with checksum",
 	                                        "missing linenumber")
-	_resend_request_communication_errors = ("line number", # since this error class gets checked after recoverable
+	_resend_request_communication_errors = ("line number", # since this error class get's checked after recoverable
 	                                                       # communication errors, we can use this broad term here
-	                                        "linenumber",  # since this error class gets checked after recoverable
+	                                        "linenumber",  # since this error class get's checked after recoverable
 	                                                       # communication errors, we can use this broad term here
-	                                        "checksum",    # since this error class gets checked after recoverable
+	                                        "checksum",    # since this error class get's checked after recoverable
 	                                                       # communication errors, we can use this broad term here
 	                                        "format error",
 	                                        "expected line")
