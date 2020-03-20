@@ -2675,7 +2675,7 @@ class MachineCom(object):
 				serial_obj.parity = serial.PARITY_NONE
 			if '://' in str(port):                            # Begin -----
 				serial_obj = serial.serial_for_url(str(port)) # -----------
-			erial_obj.close()
+			serial_obj.close()
 			serial_obj.open()
 
 			# Set close_exec flag on serial handle, see #3212
