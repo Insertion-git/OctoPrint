@@ -2652,43 +2652,28 @@ class MachineCom(object):
 
 			# connect to regular serial port
 			self._log("Connecting to: %s" % port)
-
-			serial_port_args = {
-				"baudrate": baudrateList()[0] if baudrate == 0 else baudrate,
-				"timeout": read_timeout,
-				"write_timeout": 0,
-			}
-
-			if settings().getBoolean(["serial", "exclusive"]):
-				serial_port_args["exclusive"] = True
-
-			serial_obj = serial.Serial(**serial_port_args)
-			serial_obj.port = str(port)
-
-			use_parity_workaround = settings().get(["serial", "useParityWorkaround"])
-			needs_parity_workaround = get_os() == "linux" and os.path.exists("/etc/debian_version") # See #673
-
-			if use_parity_workaround == "always" or (needs_parity_workaround and use_parity_workaround == "detect"):
-				serial_obj.parity = serial.PARITY_ODD
-				serial_obj.open()
-				serial_obj.close()
-				serial_obj.parity = serial.PARITY_NONE
 			if '://' in str(port):                            # Begin -----
 				serial_obj = serial.serial_for_url(str(port)) # -----------
+			else:                                             # End -------
+				if baudrate == 0:                             # Indent this
+					baudrates = baudrateList()
+					serial_obj = serial.Serial(str(port),
+					                           baudrates[0],
+					                           timeout=read_timeout,
+					                           write_timeout=10000,
+					                           parity=serial.PARITY_ODD)
+				else:
+					serial_obj = serial.Serial(str(port),
+					                           baudrate,
+					                           timeout=read_timeout,
+					                           write_timeout=10000,
+					                           parity=serial.PARITY_ODD)	
 			serial_obj.close()
+			serial_obj.parity = serial.PARITY_NONE
 			serial_obj.open()
 
-			# Set close_exec flag on serial handle, see #3212
-			if hasattr(serial_obj, "fd"):
-				# posix
-				set_close_exec(serial_obj.fd)
-			elif hasattr(serial_obj, "_port_handle"):
-				# win32
-				# noinspection PyProtectedMember
-				set_close_exec(serial_obj._port_handle)
-
 			return BufferedReadlineWrapper(serial_obj)
-
+			
 		serial_factories = list(self._serial_factory_hooks.items()) + [("default", default)]
 		for name, factory in serial_factories:
 			try:
